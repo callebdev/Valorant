@@ -1,5 +1,7 @@
 package com.callebdev.valorant.presentation.components
 
+import android.media.AudioManager
+import android.media.MediaPlayer
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -25,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -35,9 +38,14 @@ import com.callebdev.valorant.presentation.theme.StartSideRoundedCornerShape
 import com.callebdev.valorant.presentation.theme.color
 import com.skydoves.landscapist.CircularReveal
 import com.skydoves.landscapist.glide.GlideImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun AgentDetails(agent: Agent, onNavigateBack: () -> Unit) {
+
+    val coroutineScope = rememberCoroutineScope()
+    var mediaPlayer: MediaPlayer? = null
 
     Column(modifier = Modifier.padding(start = 16.dp).fillMaxSize()) {
         Box(modifier = Modifier.height(300.dp).fillMaxWidth().padding(top = 24.dp), contentAlignment = Alignment.TopCenter) {
@@ -83,9 +91,34 @@ fun AgentDetails(agent: Agent, onNavigateBack: () -> Unit) {
                                     fontWeight = FontWeight.SemiBold,
                                 )
 
-                                OutlinedButton(onClick = {
-                                }) {
-                                    Text(text = "${agent.displayName}'s Voice")
+                                agent.voiceLine?.mediaList?.first()?.wave?.let { wave ->
+                                    OutlinedButton(onClick = {
+                                        // todo: create a helper class to handle this logic
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            if (mediaPlayer == null) {
+                                                mediaPlayer = MediaPlayer().apply {
+                                                    setAudioStreamType(AudioManager.STREAM_MUSIC)
+                                                }
+                                            }
+
+                                            if (mediaPlayer?.isPlaying == false) {
+
+                                                with(mediaPlayer) {
+                                                    this?.setDataSource(wave)
+                                                    this?.prepare()
+                                                    this?.start()
+
+                                                    this?.setOnCompletionListener {
+                                                        it.stop()
+                                                        it.release()
+                                                        mediaPlayer = null
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }) {
+                                        Text(text = "${agent.displayName}'s Voice")
+                                    }
                                 }
                             }
                         }
